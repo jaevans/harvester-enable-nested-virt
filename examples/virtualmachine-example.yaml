@@ -1,0 +1,52 @@
+# Example VirtualMachine that will be mutated by the webhook
+# This example assumes you have a ConfigMap with a rule matching "^vm-.*" in the default namespace
+
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: vm-nested-test
+  namespace: default
+spec:
+  running: false
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: vm-nested-test
+    spec:
+      domain:
+        devices:
+          disks:
+          - name: containerdisk
+            disk:
+              bus: virtio
+          - name: cloudinitdisk
+            disk:
+              bus: virtio
+          interfaces:
+          - name: default
+            masquerade: {}
+        resources:
+          requests:
+            memory: 2Gi
+            cpu: 2
+      networks:
+      - name: default
+        pod: {}
+      volumes:
+      - name: containerdisk
+        containerDisk:
+          image: quay.io/kubevirt/cirros-container-disk-demo
+      - name: cloudinitdisk
+        cloudInitNoCloud:
+          userDataBase64: SGkuXG4=
+
+---
+# After the webhook processes this VM, it will have the CPU feature added:
+# spec:
+#   template:
+#     spec:
+#       domain:
+#         cpu:
+#           features:
+#           - name: vmx    # or 'svm' for AMD processors
+#             policy: require
