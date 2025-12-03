@@ -78,23 +78,55 @@ Each key is a namespace name, and the value is a comma-separated list of regex p
 
 ## Deployment
 
-### 1. Generate TLS Certificates
+There are two deployment options: using cert-manager for automatic certificate management (recommended) or manually generating certificates.
 
-You need to generate TLS certificates for the webhook server. You can use cert-manager or create them manually:
+### Option 1: Deploy with cert-manager (Recommended)
+
+If you have [cert-manager](https://cert-manager.io/) installed in your cluster, use the all-in-one deployment file:
 
 ```bash
-# Using OpenSSL
+# Deploy everything including Certificate, Issuer, and webhook configuration
+kubectl apply -f deploy/cert-manager-deployment.yaml
+```
+
+This will:
+- Create the namespace and ConfigMap
+- Set up a self-signed Issuer
+- Create a Certificate resource that cert-manager will automatically provision
+- Deploy the webhook with RBAC
+- Configure the MutatingWebhookConfiguration with automatic CA injection
+
+Edit the ConfigMap to define which VMs should have nested virtualization enabled:
+
+```bash
+kubectl edit configmap nested-virt-config -n harvester-nested-virt
+```
+
+### Option 2: Deploy with Manual Certificates
+
+If you don't have cert-manager, you can manually generate certificates.
+
+#### Step 1: Generate TLS Certificates
+
+You can use the provided script or OpenSSL directly:
+
+```bash
+# Option A: Using the provided script (recommended)
+./scripts/generate-certs.sh
+
+# Option B: Using OpenSSL directly
 openssl req -x509 -newkey rsa:4096 -keyout tls.key -out tls.crt -days 365 -nodes \
   -subj "/CN=nested-virt-webhook.harvester-nested-virt.svc"
 
 # Create Kubernetes secret
+kubectl create namespace harvester-nested-virt
 kubectl create secret tls nested-virt-webhook-certs \
   --cert=tls.crt \
   --key=tls.key \
   -n harvester-nested-virt
 ```
 
-### 2. Deploy the Webhook
+#### Step 2: Deploy the Webhook
 
 ```bash
 # Create namespace and RBAC
@@ -109,7 +141,7 @@ kubectl apply -f deploy/deployment.yaml
 kubectl apply -f deploy/webhook.yaml
 ```
 
-### 3. Configure VM Matching Rules
+#### Step 3: Configure VM Matching Rules
 
 Edit the ConfigMap to define which VMs should have nested virtualization enabled:
 
