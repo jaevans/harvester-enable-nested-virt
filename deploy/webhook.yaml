@@ -1,0 +1,22 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: nested-virt-webhook
+webhooks:
+- name: nested-virt.kubevirt.io
+  admissionReviewVersions: ["v1"]
+  clientConfig:
+    service:
+      name: nested-virt-webhook
+      namespace: harvester-nested-virt
+      path: "/mutate"
+    caBundle: "" # This should be populated with the CA certificate
+  rules:
+  - apiGroups: ["kubevirt.io"]
+    apiVersions: ["v1"]
+    operations: ["CREATE", "UPDATE"]
+    resources: ["virtualmachines"]
+    scope: "Namespaced"
+  sideEffects: None
+  failurePolicy: Ignore
+  timeoutSeconds: 10
