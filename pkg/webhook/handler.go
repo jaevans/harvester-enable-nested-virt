@@ -155,6 +155,9 @@ func (h *WebhookHandler) mutate(req *admissionv1.AdmissionRequest) *admissionv1.
 }
 
 // createJSONPatch creates a JSON patch between two JSON documents
+// This is a simplified implementation specific to our use case of patching
+// CPU features in VirtualMachine objects. For more complex scenarios,
+// consider using a dedicated library like github.com/evanphx/json-patch.
 func createJSONPatch(original, mutated []byte) ([]byte, error) {
 	// Simple implementation: unmarshal both, compare, and create patch
 	var origMap, mutMap map[string]interface{}

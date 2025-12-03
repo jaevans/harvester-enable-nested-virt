@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -38,21 +39,10 @@ func ParseConfigMap(cm *corev1.ConfigMap) (*Config, error) {
 
 		patterns := make([]*regexp.Regexp, 0)
 		// Split by comma to get individual patterns
-		for i := 0; i < len(patternsStr); {
-			// Find the next comma or end of string
-			end := i
-			for end < len(patternsStr) && patternsStr[end] != ',' {
-				end++
-			}
-
-			pattern := patternsStr[i:end]
-			// Trim spaces
-			for len(pattern) > 0 && (pattern[0] == ' ' || pattern[0] == '\t') {
-				pattern = pattern[1:]
-			}
-			for len(pattern) > 0 && (pattern[len(pattern)-1] == ' ' || pattern[len(pattern)-1] == '\t') {
-				pattern = pattern[:len(pattern)-1]
-			}
+		patternList := strings.Split(patternsStr, ",")
+		for _, pattern := range patternList {
+			// Trim whitespace
+			pattern = strings.TrimSpace(pattern)
 
 			if pattern != "" {
 				re, err := regexp.Compile(pattern)
@@ -61,8 +51,6 @@ func ParseConfigMap(cm *corev1.ConfigMap) (*Config, error) {
 				}
 				patterns = append(patterns, re)
 			}
-
-			i = end + 1
 		}
 
 		if len(patterns) > 0 {
