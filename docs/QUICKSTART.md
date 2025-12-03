@@ -6,7 +6,33 @@ This guide will help you get the nested virtualization webhook up and running qu
 
 - Kubernetes cluster with KubeVirt installed
 - kubectl configured to access your cluster
-- openssl (for certificate generation)
+- (Optional) [cert-manager](https://cert-manager.io/) installed for automatic certificate management
+- (Manual option) openssl for certificate generation
+
+## Deployment Options
+
+Choose one of the following deployment methods:
+
+### Quick Deploy with cert-manager (Recommended)
+
+If you have cert-manager installed:
+
+```bash
+git clone https://github.com/jaevans/harvester-enable-nested-virt.git
+cd harvester-enable-nested-virt
+
+# Deploy everything with one command
+kubectl apply -f deploy/cert-manager-deployment.yaml
+
+# Configure VM matching rules
+kubectl edit configmap nested-virt-config -n harvester-nested-virt
+```
+
+That's it! The certificates will be automatically generated and managed by cert-manager.
+
+### Manual Deployment with Self-Generated Certificates
+
+If you don't have cert-manager, follow these steps:
 
 ## Step 1: Clone the Repository
 
