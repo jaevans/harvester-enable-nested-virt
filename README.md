@@ -14,6 +14,7 @@ This webhook intercepts KubeVirt VirtualMachine create and update operations and
 - ✅ Non-invasive: only mutates VMs that match configured patterns
 - ✅ Comprehensive test coverage using Ginkgo/Gomega
 - ✅ Production-ready with health checks and graceful shutdown
+- ✅ Automated testing via GitHub Actions CI/CD
 
 ## How It Works
 
@@ -277,3 +278,13 @@ Contributions are welcome! Please ensure:
 2. Code is formatted: `make fmt`
 3. Go modules are tidy: `make tidy`
 4. Add tests for new functionality
+
+### Continuous Integration
+
+This project uses GitHub Actions for automated testing. Pull requests must pass all CI checks before merging:
+
+- **Test Job**: Runs the full test suite with race detection and coverage
+- **Build Job**: Verifies the code compiles successfully
+- **Lint Job**: Checks code quality with `go vet` and ensures dependencies are tidy
+
+See [`.github/WORKFLOWS.md`](.github/WORKFLOWS.md) for detailed information about the CI/CD setup and branch protection configuration.
