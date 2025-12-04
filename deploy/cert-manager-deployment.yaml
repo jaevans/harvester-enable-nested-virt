@@ -1,0 +1,179 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: harvester-nested-virt
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: nested-virt-selfsigned-issuer
+  namespace: harvester-nested-virt
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: nested-virt-webhook-cert
+  namespace: harvester-nested-virt
+spec:
+  secretName: nested-virt-webhook-certs
+  duration: 2160h # 90 days
+  renewBefore: 360h # 15 days
+  subject:
+    organizations:
+    - harvester-nested-virt
+  commonName: nested-virt-webhook.harvester-nested-virt.svc
+  dnsNames:
+  - nested-virt-webhook
+  - nested-virt-webhook.harvester-nested-virt
+  - nested-virt-webhook.harvester-nested-virt.svc
+  - nested-virt-webhook.harvester-nested-virt.svc.cluster.local
+  issuerRef:
+    name: nested-virt-selfsigned-issuer
+    kind: Issuer
+    group: cert-manager.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nested-virt-config
+  namespace: harvester-nested-virt
+data:
+  # Format: namespace: regex1,regex2,regex3
+  # Example entries:
+  # default: "^vm-.*,^test-.*"
+  # production: "^prod-.*"
+  # staging: ".*-staging$"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nested-virt-webhook
+  namespace: harvester-nested-virt
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nested-virt-webhook
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["kubevirt.io"]
+  resources: ["virtualmachines"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: nested-virt-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: nested-virt-webhook
+subjects:
+- kind: ServiceAccount
+  name: nested-virt-webhook
+  namespace: harvester-nested-virt
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nested-virt-webhook
+  namespace: harvester-nested-virt
+spec:
+  ports:
+  - name: https
+    port: 443
+    targetPort: 8443
+  selector:
+    app: nested-virt-webhook
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nested-virt-webhook
+  namespace: harvester-nested-virt
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nested-virt-webhook
+  template:
+    metadata:
+      labels:
+        app: nested-virt-webhook
+    spec:
+      serviceAccountName: nested-virt-webhook
+      containers:
+      - name: webhook
+        image: harvester-nested-virt-webhook:latest
+        imagePullPolicy: IfNotPresent
+        args:
+        - --port=8443
+        - --cert-file=/etc/webhook/certs/tls.crt
+        - --key-file=/etc/webhook/certs/tls.key
+        - --configmap-name=nested-virt-config
+        - --configmap-namespace=harvester-nested-virt
+        ports:
+        - containerPort: 8443
+          name: https
+        volumeMounts:
+        - name: webhook-certs
+          mountPath: /etc/webhook/certs
+          readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          limits:
+            cpu: 500m
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+      volumes:
+      - name: webhook-certs
+        secret:
+          secretName: nested-virt-webhook-certs
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: nested-virt-webhook
+  annotations:
+    cert-manager.io/inject-ca-from: harvester-nested-virt/nested-virt-webhook-cert
+webhooks:
+- name: nested-virt.kubevirt.io
+  admissionReviewVersions: ["v1"]
+  clientConfig:
+    service:
+      name: nested-virt-webhook
+      namespace: harvester-nested-virt
+      path: "/mutate"
+  rules:
+  - apiGroups: ["kubevirt.io"]
+    apiVersions: ["v1"]
+    operations: ["CREATE", "UPDATE"]
+    resources: ["virtualmachines"]
+    scope: "Namespaced"
+  sideEffects: None
+  failurePolicy: Ignore
+  timeoutSeconds: 10
