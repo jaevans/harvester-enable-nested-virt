@@ -4,15 +4,10 @@ on:
   pull_request:
     branches:
       - main
-      - master
     types:
       - opened
       - synchronize
       - reopened
-  push:
-    branches:
-      - main
-      - master
 
 permissions:
   contents: read
@@ -85,8 +80,10 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
       
-      - name: Run go vet
-        run: go vet ./...
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
       
       - name: Run go mod tidy check
         run: |
@@ -96,15 +93,3 @@ jobs:
             git diff go.mod go.sum
             exit 1
           fi
-      
-      - name: Check code formatting (informational)
-        run: |
-          UNFORMATTED=$(gofmt -s -l .)
-          if [ -n "$UNFORMATTED" ]; then
-            echo "::warning::The following files need formatting:"
-            echo "$UNFORMATTED"
-            echo "Run 'make fmt' to format the code"
-          else
-            echo "All files are properly formatted"
-          fi
-        continue-on-error: true

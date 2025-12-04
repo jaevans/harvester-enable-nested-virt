@@ -9,8 +9,7 @@ This repository uses GitHub Actions to automatically test pull requests and ensu
 ### Test Workflow (`.github/workflows/test.yml`)
 
 The test workflow runs automatically on:
-- Pull requests to `main` or `master` branches
-- Direct pushes to `main` or `master` branches
+- Pull requests to the `main` branch
 
 #### Jobs
 
@@ -27,19 +26,18 @@ The test workflow runs automatically on:
    - Verifies the binary was created successfully
 
 3. **Lint Job**: Checks code quality
-   - Runs `go vet` to catch common errors
+   - Runs `golangci-lint` for comprehensive linting
    - Verifies `go.mod` and `go.sum` are tidy
-   - Checks code formatting (informational only)
 
 ## Branch Protection
 
-To ensure that only tested code is merged, configure the following branch protection rules for the `main` (or `master`) branch:
+To ensure that only tested code is merged, configure the following branch protection rules for the `main` branch:
 
 ### Recommended Settings
 
 1. Go to **Settings** → **Branches** → **Branch protection rules**
 2. Click **Add rule** or edit existing rule
-3. Set **Branch name pattern** to `main` (or `master`)
+3. Set **Branch name pattern** to `main`
 4. Enable the following settings:
 
 #### Required Status Checks
@@ -64,7 +62,7 @@ If you need to set up branch protection via GitHub UI:
 2. Click on **Settings**
 3. In the left sidebar, click on **Branches**
 4. Under "Branch protection rules", click **Add rule**
-5. In "Branch name pattern", enter `main` or `master`
+5. In "Branch name pattern", enter `main`
 6. Check **Require status checks to pass before merging**
 7. Search for and select these status checks:
    - `Run Tests`
@@ -84,10 +82,7 @@ make test
 make build
 
 # Run linter
-go vet ./...
-
-# Check formatting
-gofmt -s -l .
+make lint
 
 # Format code
 make fmt
@@ -117,7 +112,7 @@ If the build job fails:
 ### Lint Failures
 
 If the lint job fails:
-1. Run `go vet ./...` locally to see the issues
+1. Run `make lint` locally to see the issues
 2. Fix the reported issues
 3. Ensure `go mod tidy` doesn't change anything
 4. Push your changes to trigger the workflow again
