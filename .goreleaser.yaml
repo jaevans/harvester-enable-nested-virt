@@ -1,6 +1,9 @@
 # GoReleaser configuration for harvester-enable-nested-virt
 version: 2
 
+# NOTE: If you fork this repository and want to publish to your own registry,
+# update the image_templates below to use your GitHub username/org instead of 'jaevans'
+
 before:
   hooks:
     # Ensure dependencies are up to date
