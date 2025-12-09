@@ -165,7 +165,7 @@ If changing how VMs are mutated:
 ## Security Considerations
 
 - Validate all input from ConfigMap patterns
-- Ensure regex patterns can't cause ReDoS
+- Ensure regex patterns can't cause ReDoS (Regular Expression Denial of Service)
 - Don't log sensitive VM configuration data
 - Follow principle of least privilege for RBAC
 
