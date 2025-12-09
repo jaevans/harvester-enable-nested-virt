@@ -41,9 +41,6 @@ dockers:
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
       - "--label=org.opencontainers.image.source={{.GitURL}}"
-    extra_files:
-      - go.mod
-      - go.sum
   
   # ARM64 image
   - id: webhook-arm64
@@ -61,9 +58,6 @@ dockers:
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
       - "--label=org.opencontainers.image.source={{.GitURL}}"
-    extra_files:
-      - go.mod
-      - go.sum
 
 docker_manifests:
   # Create multi-arch manifest for tagged version
