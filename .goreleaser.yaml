@@ -2,7 +2,7 @@
 version: 2
 
 # NOTE: If you fork this repository and want to publish to your own registry,
-# update the image_templates below to use your GitHub username/org instead of 'jaevans'
+# update the KO_DOCKER_REPO environment variable in .github/workflows/release.yml
 
 before:
   hooks:
@@ -27,53 +27,24 @@ builds:
       - -X main.commit={{.Commit}}
       - -X main.date={{.Date}}
 
-dockers:
-  # AMD64 image
-  - id: webhook-amd64
-    goos: linux
-    goarch: amd64
-    image_templates:
-      - "ghcr.io/jaevans/harvester-nested-virt-webhook:{{ .Tag }}-amd64"
-      - "ghcr.io/jaevans/harvester-nested-virt-webhook:latest-amd64"
-    dockerfile: Dockerfile.goreleaser
-    use: buildx
-    build_flag_templates:
-      - "--platform=linux/amd64"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--label=org.opencontainers.image.source={{.GitURL}}"
-  
-  # ARM64 image
-  - id: webhook-arm64
-    goos: linux
-    goarch: arm64
-    image_templates:
-      - "ghcr.io/jaevans/harvester-nested-virt-webhook:{{ .Tag }}-arm64"
-      - "ghcr.io/jaevans/harvester-nested-virt-webhook:latest-arm64"
-    dockerfile: Dockerfile.goreleaser
-    use: buildx
-    build_flag_templates:
-      - "--platform=linux/arm64"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--label=org.opencontainers.image.source={{.GitURL}}"
-
-docker_manifests:
-  # Create multi-arch manifest for tagged version
-  - name_template: "ghcr.io/jaevans/harvester-nested-virt-webhook:{{ .Tag }}"
-    image_templates:
-      - "ghcr.io/jaevans/harvester-nested-virt-webhook:{{ .Tag }}-amd64"
-      - "ghcr.io/jaevans/harvester-nested-virt-webhook:{{ .Tag }}-arm64"
-  
-  # Create multi-arch manifest for latest
-  - name_template: "ghcr.io/jaevans/harvester-nested-virt-webhook:latest"
-    image_templates:
-      - "ghcr.io/jaevans/harvester-nested-virt-webhook:latest-amd64"
-      - "ghcr.io/jaevans/harvester-nested-virt-webhook:latest-arm64"
+kos:
+  - id: webhook-ko
+    build: webhook
+    base_image: cgr.dev/chainguard/static:latest
+    tags:
+      - '{{.Tag}}'
+      - latest
+    bare: true
+    preserve_import_paths: false
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    labels:
+      org.opencontainers.image.created: '{{.Date}}'
+      org.opencontainers.image.title: '{{.ProjectName}}'
+      org.opencontainers.image.revision: '{{.FullCommit}}'
+      org.opencontainers.image.version: '{{.Version}}'
+      org.opencontainers.image.source: '{{.GitURL}}'
 
 checksum:
   name_template: 'checksums.txt'

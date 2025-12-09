@@ -107,15 +107,27 @@ git push origin :refs/tags/v1.0.0
 
 Note: Container images pushed to GHCR must be deleted separately via the GitHub Packages UI.
 
-## GoReleaser Configuration
+## GoReleaser and Ko Configuration
 
-The release process is managed by GoReleaser. Configuration is in `.goreleaser.yaml`.
+The release process is managed by GoReleaser with Ko for container builds. Configuration is in `.goreleaser.yaml`.
+
+**Container Building with Ko**: This project uses [Ko](https://ko.build/) for building container images instead of Docker. Ko is specifically designed for Go applications and provides:
+- No Dockerfile required
+- Fast, reproducible builds
+- Automatic multi-arch support
+- Minimal base images
 
 To test the release locally without publishing:
 
 ```bash
 # Install goreleaser (if not already installed)
 # See: https://goreleaser.com/install/
+
+# Install ko (if not already installed)
+# See: https://ko.build/install/
+
+# Set the container repository
+export KO_DOCKER_REPO=ghcr.io/yourusername/harvester-nested-virt-webhook
 
 # Build a snapshot (no tag required)
 goreleaser build --snapshot --clean
@@ -128,10 +140,12 @@ goreleaser release --snapshot --clean
 
 If you fork this repository and want to publish to your own registry:
 
-1. Update `.goreleaser.yaml`:
-   - Change `jaevans` to your GitHub username/org in all `image_templates`
-   - Update the `owner` in the `release` section
+1. Update `.github/workflows/release.yml`:
+   - Change the `KO_DOCKER_REPO` environment variable to your registry path
 
-2. Ensure GitHub Actions has the necessary permissions:
+2. Update `.goreleaser.yaml`:
+   - Update the `owner` in the `release` section to your GitHub username/org
+
+3. Ensure GitHub Actions has the necessary permissions:
    - Repository Settings → Actions → General → Workflow permissions
    - Enable "Read and write permissions"
