@@ -1,0 +1,95 @@
+name: Test
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+      
+      - name: Download dependencies
+        run: go mod download
+      
+      - name: Run tests
+        run: make test
+      
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage.out
+          retention-days: 7
+
+  build:
+    name: Build Binary
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+      
+      - name: Download dependencies
+        run: go mod download
+      
+      - name: Build binary
+        run: make build
+      
+      - name: Check binary
+        run: |
+          ls -lh bin/webhook
+          file bin/webhook
+
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+      
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9.2.0
+        with:
+          version: v2.7.2
+      
+      - name: Run go mod tidy check
+        run: |
+          go mod tidy
+          if [ -n "$(git status --porcelain go.mod go.sum)" ]; then
+            echo "go.mod or go.sum is not tidy"
+            git diff go.mod go.sum
+            exit 1
+          fi

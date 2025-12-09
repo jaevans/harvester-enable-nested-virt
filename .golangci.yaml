@@ -1,0 +1,6 @@
+version: "2"
+linters:
+  exclusions:
+    presets:
+      - common-false-positives
+      - std-error-handling
