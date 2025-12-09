@@ -1,0 +1,115 @@
+# GoReleaser configuration for harvester-enable-nested-virt
+version: 2
+
+before:
+  hooks:
+    # Ensure dependencies are up to date
+    - go mod tidy
+    - go mod download
+
+builds:
+  - id: webhook
+    main: ./cmd/webhook
+    binary: webhook
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+dockers:
+  # AMD64 image
+  - id: webhook-amd64
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "ghcr.io/jaevans/harvester-nested-virt-webhook:{{ .Tag }}-amd64"
+      - "ghcr.io/jaevans/harvester-nested-virt-webhook:latest-amd64"
+    dockerfile: Dockerfile.goreleaser
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+    extra_files:
+      - go.mod
+      - go.sum
+  
+  # ARM64 image
+  - id: webhook-arm64
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "ghcr.io/jaevans/harvester-nested-virt-webhook:{{ .Tag }}-arm64"
+      - "ghcr.io/jaevans/harvester-nested-virt-webhook:latest-arm64"
+    dockerfile: Dockerfile.goreleaser
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+    extra_files:
+      - go.mod
+      - go.sum
+
+docker_manifests:
+  # Create multi-arch manifest for tagged version
+  - name_template: "ghcr.io/jaevans/harvester-nested-virt-webhook:{{ .Tag }}"
+    image_templates:
+      - "ghcr.io/jaevans/harvester-nested-virt-webhook:{{ .Tag }}-amd64"
+      - "ghcr.io/jaevans/harvester-nested-virt-webhook:{{ .Tag }}-arm64"
+  
+  # Create multi-arch manifest for latest
+  - name_template: "ghcr.io/jaevans/harvester-nested-virt-webhook:latest"
+    image_templates:
+      - "ghcr.io/jaevans/harvester-nested-virt-webhook:latest-amd64"
+      - "ghcr.io/jaevans/harvester-nested-virt-webhook:latest-arm64"
+
+checksum:
+  name_template: 'checksums.txt'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - '^chore:'
+      - 'merge conflict'
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+
+release:
+  github:
+    owner: jaevans
+    name: harvester-enable-nested-virt
+  draft: false
+  prerelease: auto
+  name_template: "{{.ProjectName}} {{.Version}}"
+  header: |
+    ## Release {{.Version}}
+    
+    This release includes the webhook binary and container image for enabling nested virtualization in Harvester VMs.
+    
+    ### Container Images
+    
+    Multi-arch container images are available at:
+    - `ghcr.io/jaevans/harvester-nested-virt-webhook:{{.Version}}`
+    - `ghcr.io/jaevans/harvester-nested-virt-webhook:latest`
+    
+    Supported architectures: `linux/amd64`, `linux/arm64`
