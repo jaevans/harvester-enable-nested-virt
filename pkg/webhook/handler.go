@@ -83,7 +83,7 @@ func (h *WebhookHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(responseBytes)
+	w.Write(responseBytes) //nolint:errcheck
 }
 
 // mutate processes the admission request and returns an admission response
