@@ -1,0 +1,83 @@
+# GoReleaser configuration for harvester-enable-nested-virt
+version: 2
+
+# NOTE: If you fork this repository and want to publish to your own registry,
+# update the KO_DOCKER_REPO environment variable in .github/workflows/release.yml
+
+before:
+  hooks:
+    # Ensure dependencies are up to date
+    - go mod tidy
+    - go mod download
+
+builds:
+  - id: webhook
+    main: ./cmd/webhook
+    binary: webhook
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+kos:
+  - id: webhook-ko
+    build: webhook
+    base_image: cgr.dev/chainguard/static:latest
+    tags:
+      - '{{.Tag}}'
+      - latest
+    bare: true
+    preserve_import_paths: false
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    labels:
+      org.opencontainers.image.created: '{{.Date}}'
+      org.opencontainers.image.title: '{{.ProjectName}}'
+      org.opencontainers.image.revision: '{{.FullCommit}}'
+      org.opencontainers.image.version: '{{.Version}}'
+      org.opencontainers.image.source: '{{.GitURL}}'
+
+checksum:
+  name_template: 'checksums.txt'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - '^chore:'
+      - 'merge conflict'
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+
+release:
+  github:
+    owner: jaevans
+    name: harvester-enable-nested-virt
+  draft: false
+  prerelease: auto
+  name_template: "{{.ProjectName}} {{.Version}}"
+  header: |
+    ## Release {{.Version}}
+    
+    This release includes the webhook binary and container image for enabling nested virtualization in Harvester VMs.
+    
+    ### Container Images
+    
+    Multi-arch container images are available at:
+    - `ghcr.io/jaevans/harvester-nested-virt-webhook:{{.Version}}`
+    - `ghcr.io/jaevans/harvester-nested-virt-webhook:latest`
+    
+    Supported architectures: `linux/amd64`, `linux/arm64`
