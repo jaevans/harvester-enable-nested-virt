@@ -63,5 +63,5 @@ func (s *Server) Shutdown(ctx context.Context) error {
 // healthzHandler handles health check requests
 func healthzHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("ok"))
+	w.Write([]byte("ok")) //nolint:errcheck
 }
