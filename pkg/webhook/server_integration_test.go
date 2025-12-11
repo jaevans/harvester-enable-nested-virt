@@ -42,14 +42,13 @@ var _ = BeforeSuite(func() {
 
 var _ = Describe("Server Integration", func() {
 	var (
-		cfg         *config.Config
-		mutator     *mutation.VMFeatureMutator
-		handler     *WebhookHandler
-		certFile    string
-		keyFile     string
-		httpClient  *http.Client
-		port        int
-		testDataDir string
+		cfg        *config.Config
+		mutator    *mutation.VMFeatureMutator
+		handler    *WebhookHandler
+		certFile   string
+		keyFile    string
+		httpClient *http.Client
+		port       int
 	)
 
 	BeforeEach(func() {
@@ -241,9 +240,17 @@ var _ = Describe("Server Integration", func() {
 
 		It("should return error when certificate is malformed", func() {
 			server := NewServer(ServerConfig{Port: port}, handler)
-			malformedCert := filepath.Join(testDataDir, "malformed-cert.pem")
 
-			err := server.Start(malformedCert, keyFile)
+			// replace the certFile with a malformed certificate
+			fakeCert := `-----BEGIN CERTIFICATE-----
+This is not a valid certificate. It's just some random text that looks like
+a PEM-encoded certificate but is actually malformed and cannot be decoded.
+If you try to use this as a real certificate, it will fail validation.
+-----END CERTIFICATE-----`
+			err := os.WriteFile(certFile, []byte(fakeCert), 0600)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = server.Start(certFile, keyFile)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("failed to load TLS certificates"))
 		})
