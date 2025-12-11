@@ -17,8 +17,16 @@ var _ = Describe("Mutation Internal tests", func() {
 			BeforeEach(func() {
 				detector = NewDefaultCPUFeatureDetector()
 			})
+
 			It("should be created with default constructor", func() {
 				Expect(detector).NotTo(BeNil())
+			})
+
+			It("should return an error if /proc/cpuinfo cannot be read", func() {
+				invalidDetector := &DefaultCPUFeatureDetector{cpuInfoPath: "/nonexistent/path"}
+				feature, err := invalidDetector.DetectFeature()
+				Expect(err).To(HaveOccurred())
+				Expect(feature).To(BeEquivalentTo(CPUFeatureNil))
 			})
 
 			It("should detect VMX on Intel feature", func() {
@@ -129,6 +137,21 @@ CPU revision	: 3
 			// Note: We can't easily test the actual CPU feature detection
 			// in a unit test as it depends on the host CPU.
 			// Integration tests would be needed to verify this functionality.
+		})
+	})
+
+	Describe("NewVMFeatureMutator", func() {
+		It("should create a VMFeatureMutator with default detector when nil is provided", func() {
+			mutator := NewVMFeatureMutator(nil)
+			Expect(mutator).NotTo(BeNil())
+			Expect(mutator.detector).NotTo(BeNil())
+		})
+
+		It("should create a VMFeatureMutator with the provided detector", func() {
+			mockDetector := &DefaultCPUFeatureDetector{}
+			mutator := NewVMFeatureMutator(mockDetector)
+			Expect(mutator).NotTo(BeNil())
+			Expect(mutator.detector).To(Equal(mockDetector))
 		})
 	})
 })
