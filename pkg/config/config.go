@@ -6,6 +6,7 @@ import (
 
 	"log/slog"
 
+	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
 
@@ -16,8 +17,8 @@ type NamespaceRule struct {
 }
 
 type NamespaceRuleConfig struct {
-	Namespace string
-	Patterns  []string
+	Namespace string   `yaml:"namespace"`
+	Patterns  []string `yaml:"patterns"`
 }
 
 // Config holds the configuration for the webhook
@@ -68,6 +69,28 @@ func LoadConfig(configFile string) (*Config, error) {
 	}
 	err = yaml.Unmarshal(data, &cfg)
 	return &cfg, err
+}
+
+// MergeWithOverrides applies environment and flag overrides onto a base config.
+// Precedence (lowest to highest): config file < environment < command line flags.
+// Only keys that are explicitly set in viper are overridden; unset keys are left intact.
+func MergeWithOverrides(v *viper.Viper, cfg *Config) *Config {
+	if cfg == nil {
+		cfg = &Config{}
+	}
+	// environment and flags are both represented via Viper; use IsSet to guard
+	if v.IsSet("port") {
+		cfg.Port = v.GetInt("port")
+	}
+	if v.IsSet("cert-dir") {
+
+		cfg.CertDir = v.GetString("cert-dir")
+	}
+	if v.IsSet("debug") {
+		cfg.Debug = v.GetBool("debug")
+	}
+	// Rules are only defined via config file currently; do not override here
+	return cfg
 }
 
 // Matches checks if a VM in the given namespace with the given name matches any rule

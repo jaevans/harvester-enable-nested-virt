@@ -3,11 +3,13 @@ package config_test
 import (
 	"log/slog"
 	"os"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/jaevans/harvester-enable-nested-virt/pkg/config"
+	"github.com/spf13/viper"
 )
 
 var _ = BeforeSuite(func() {
@@ -46,6 +48,82 @@ port: not_a_number
 
 			_, err = config.LoadConfig(tmpFile)
 			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("MergeWithOverrides", func() {
+
+		var (
+			envV *viper.Viper
+			cliV *viper.Viper
+		)
+
+		BeforeEach(func() {
+			envV = viper.New()
+			envV.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+			cliV = viper.New()
+			cliV.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+		})
+		It("should apply env overrides over config file and flags over env", func() {
+			base := &config.Config{Port: 8443, CertDir: "/etc/webhook/certs", Debug: false}
+
+			// Environment overrides should override config file values
+			envV.Set("cert-dir", "/env/certs")
+			envMerged := config.MergeWithOverrides(envV, base)
+			Expect(envMerged.CertDir).To(Equal("/env/certs"))
+			Expect(envMerged.Port).To(Equal(8443))
+			Expect(envMerged.Debug).To(BeFalse())
+		})
+
+		It("should apply CLI flag overrides over env", func() {
+			base := &config.Config{Port: 8443, CertDir: "/etc/webhook/certs", Debug: false}
+
+			// First apply environment overrides over the base config
+			envV.Set("cert-dir", "/env/certs")
+			envMerged := config.MergeWithOverrides(envV, base)
+			Expect(envMerged.CertDir).To(Equal("/env/certs"))
+			Expect(envMerged.Port).To(Equal(8443))
+			Expect(envMerged.Debug).To(BeFalse())
+
+			// Then apply CLI flag overrides over the env-merged config
+			cliV.Set("port", 9443)
+			cliV.Set("debug", true)
+			cliMerged := config.MergeWithOverrides(cliV, envMerged)
+			Expect(cliMerged.Port).To(Equal(9443))
+			Expect(cliMerged.Debug).To(BeTrue())
+			// cert-dir should remain as set by env when not overridden by CLI
+			Expect(cliMerged.CertDir).To(Equal("/env/certs"))
+		})
+
+		It("should apply CLI flag overrides over config file", func() {
+			base := &config.Config{Port: 8443, CertDir: "/etc/webhook/certs", Debug: false}
+
+			// Apply CLI overrides directly over the base config (representing config file)
+			cliV.Set("port", 9443)
+			cliV.Set("debug", true)
+			cliMerged := config.MergeWithOverrides(cliV, base)
+
+			Expect(cliMerged.Port).To(Equal(9443))
+			Expect(cliMerged.Debug).To(BeTrue())
+			Expect(cliMerged.CertDir).To(Equal("/etc/webhook/certs"))
+		})
+
+		It("should not clear values when overrides are not set", func() {
+			base := &config.Config{Port: 8443, CertDir: "/etc/webhook/certs", Debug: true}
+			v := viper.New()
+			merged := config.MergeWithOverrides(v, base)
+			Expect(merged.Port).To(Equal(8443))
+			Expect(merged.CertDir).To(Equal("/etc/webhook/certs"))
+			Expect(merged.Debug).To(BeTrue())
+		})
+
+		It("should handle nil base config", func() {
+			v := viper.New()
+			v.Set("port", 9443)
+			merged := config.MergeWithOverrides(v, nil)
+			Expect(merged.Port).To(Equal(9443))
+			Expect(merged.CertDir).To(Equal(""))
+			Expect(merged.Debug).To(BeFalse())
 		})
 	})
 
