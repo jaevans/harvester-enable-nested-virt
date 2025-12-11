@@ -36,3 +36,4 @@ bin/
 
 # GoReleaser artifacts
 dist/
+/main

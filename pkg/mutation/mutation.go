@@ -8,15 +8,18 @@ import (
 	kubevirtv1 "kubevirt.io/api/core/v1"
 )
 
+type CPUFeature string
+
 const (
 	// CPU feature flags
-	CPUFeatureVMX = "vmx" // Intel VT-x
-	CPUFeatureSVM = "svm" // AMD-V
+	CPUFeatureNil = CPUFeature("")
+	CPUFeatureVMX = CPUFeature("vmx") // Intel VT-x
+	CPUFeatureSVM = CPUFeature("svm") // AMD-V
 )
 
 // CPUFeatureDetector defines the interface for detecting CPU features
 type CPUFeatureDetector interface {
-	DetectFeature() (string, error)
+	DetectFeature() (CPUFeature, error)
 }
 
 // DefaultCPUFeatureDetector implements CPUFeatureDetector using /proc/cpuinfo
@@ -32,14 +35,14 @@ func NewDefaultCPUFeatureDetector() *DefaultCPUFeatureDetector {
 }
 
 // DetectFeature reads /proc/cpuinfo and returns the appropriate CPU feature
-func (d *DefaultCPUFeatureDetector) DetectFeature() (string, error) {
+func (d *DefaultCPUFeatureDetector) DetectFeature() (CPUFeature, error) {
 	data, err := os.ReadFile(d.cpuInfoPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to read %s: %w", d.cpuInfoPath, err)
+		return CPUFeatureNil, fmt.Errorf("failed to read %s: %w", d.cpuInfoPath, err)
 	}
 
 	cpuInfo := string(data)
-	
+
 	// Look for the flags line in cpuinfo
 	lines := strings.Split(cpuInfo, "\n")
 	for _, line := range lines {
@@ -54,7 +57,7 @@ func (d *DefaultCPUFeatureDetector) DetectFeature() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("no virtualization feature (vmx or svm) found in CPU info")
+	return CPUFeatureNil, fmt.Errorf("no virtualization feature (vmx or svm) found in CPU info")
 }
 
 // VMFeatureMutator handles mutation of VirtualMachine objects
@@ -97,7 +100,7 @@ func (m *VMFeatureMutator) MutateVM(vm *kubevirtv1.VirtualMachine) error {
 	// Check if the feature already exists
 	featureExists := false
 	for _, f := range vm.Spec.Template.Spec.Domain.CPU.Features {
-		if f.Name == feature {
+		if f.Name == string(feature) {
 			featureExists = true
 			break
 		}
@@ -108,7 +111,7 @@ func (m *VMFeatureMutator) MutateVM(vm *kubevirtv1.VirtualMachine) error {
 		vm.Spec.Template.Spec.Domain.CPU.Features = append(
 			vm.Spec.Template.Spec.Domain.CPU.Features,
 			kubevirtv1.CPUFeature{
-				Name:   feature,
+				Name:   string(feature),
 				Policy: "require",
 			},
 		)

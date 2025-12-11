@@ -21,7 +21,7 @@ var _ = Describe("Server", func() {
 
 	BeforeEach(func() {
 		cfg = &config.Config{
-			Rules: []config.NamespaceRule{},
+			Rules: []config.NamespaceRuleConfig{},
 		}
 		detector := &MockCPUFeatureDetector{feature: "vmx"}
 		mutator = mutation.NewVMFeatureMutator(detector)
