@@ -77,7 +77,7 @@ release:
     ### Container Images
     
     Multi-arch container images are available at:
-    - `ghcr.io/jaevans/harvester-nested-virt-webhook:{{.Version}}`
+    - `ghcr.io/jaevans/harvester-nested-virt-webhook:{{.Tag}}`
     - `ghcr.io/jaevans/harvester-nested-virt-webhook:latest`
     
     Supported architectures: `linux/amd64`, `linux/arm64`
