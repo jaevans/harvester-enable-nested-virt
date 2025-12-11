@@ -2,73 +2,61 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 
 	"github.com/jaevans/harvester-enable-nested-virt/pkg/config"
 	"github.com/jaevans/harvester-enable-nested-virt/pkg/mutation"
 	"github.com/jaevans/harvester-enable-nested-virt/pkg/webhook"
-)
 
-var (
-	port              int
-	certFile          string
-	keyFile           string
-	configMapName     string
-	configMapNamespace string
-	kubeconfig        string
+	"log/slog"
 )
 
 func init() {
-	flag.IntVar(&port, "port", 8443, "Webhook server port")
-	flag.StringVar(&certFile, "cert-file", "/etc/webhook/certs/tls.crt", "TLS certificate file")
-	flag.StringVar(&keyFile, "key-file", "/etc/webhook/certs/tls.key", "TLS key file")
-	flag.StringVar(&configMapName, "configmap-name", "nested-virt-config", "ConfigMap name containing VM matching rules")
-	flag.StringVar(&configMapNamespace, "configmap-namespace", "default", "ConfigMap namespace")
-	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to kubeconfig file (optional, uses in-cluster config if not provided)")
+	pflag.String("config", "/etc/webhook/config.yaml", "Path to the configuration file")
+	pflag.Int("port", 8443, "Webhook server port")
+	pflag.String("cert-dir", "/etc/webhook/certs", "The directory containing TLS certificates (overrides CERT_DIR env var)")
+	pflag.Bool("debug", false, "Enable debug logging")
+	err := viper.BindPFlags(pflag.CommandLine)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to bind command line flags: %v\n", err)
+		os.Exit(1)
+	}
+	viper.SetEnvPrefix("nested_virt")
+	viper.AutomaticEnv()
 }
 
 func main() {
-	flag.Parse()
+	pflag.Parse()
+	configFile := viper.GetString("config")
 
-	// Create Kubernetes client
-	k8sConfig, err := getK8sConfig()
+	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get Kubernetes config: %v\n", err)
+		slog.Error("Failed to load configuration", "error", err)
 		os.Exit(1)
 	}
 
-	clientset, err := kubernetes.NewForConfig(k8sConfig)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create Kubernetes client: %v\n", err)
-		os.Exit(1)
+	// Set up logging
+	var logLevel slog.Level
+	if cfg.Debug {
+		logLevel = slog.LevelDebug
+	} else {
+		logLevel = slog.LevelInfo
 	}
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel}))
+	slog.SetDefault(logger)
 
-	// Load ConfigMap
-	cm, err := loadConfigMap(clientset, configMapNamespace, configMapName)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to load ConfigMap: %v\n", err)
-		os.Exit(1)
-	}
+	// Get the certificate files
+	certFile := fmt.Sprintf("%s/tls.crt", cfg.CertDir)
+	keyFile := fmt.Sprintf("%s/tls.key", cfg.CertDir)
 
-	// Parse configuration
-	cfg, err := config.ParseConfigMap(cm)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to parse ConfigMap: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("Loaded configuration with %d rules\n", len(cfg.Rules))
+	logger.Info("Loaded configuration", "rules_count", len(cfg.Rules))
 
 	// Create mutator
 	mutator := mutation.NewVMFeatureMutator(nil)
@@ -78,7 +66,7 @@ func main() {
 
 	// Create server
 	serverCfg := webhook.ServerConfig{
-		Port:     port,
+		Port:     cfg.Port,
 		CertFile: certFile,
 		KeyFile:  keyFile,
 	}
@@ -86,7 +74,7 @@ func main() {
 
 	// Start server in a goroutine
 	go func() {
-		fmt.Printf("Starting webhook server on port %d\n", port)
+		fmt.Printf("Starting webhook server on port %d\n", cfg.Port)
 		if err := server.Start(certFile, keyFile); err != nil {
 			fmt.Fprintf(os.Stderr, "Server error: %v\n", err)
 			os.Exit(1)
@@ -108,19 +96,4 @@ func main() {
 	}
 
 	fmt.Println("Webhook server stopped")
-}
-
-func getK8sConfig() (*rest.Config, error) {
-	if kubeconfig != "" {
-		return clientcmd.BuildConfigFromFlags("", kubeconfig)
-	}
-	return rest.InClusterConfig()
-}
-
-func loadConfigMap(clientset *kubernetes.Clientset, namespace, name string) (*corev1.ConfigMap, error) {
-	cm, err := clientset.CoreV1().ConfigMaps(namespace).Get(context.Background(), name, metav1.GetOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get ConfigMap %s/%s: %w", namespace, name, err)
-	}
-	return cm, nil
 }

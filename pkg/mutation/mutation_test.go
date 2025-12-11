@@ -12,11 +12,11 @@ import (
 
 // MockCPUFeatureDetector is a mock implementation of CPUFeatureDetector for testing
 type MockCPUFeatureDetector struct {
-	feature string
+	feature mutation.CPUFeature
 	err     error
 }
 
-func (m *MockCPUFeatureDetector) DetectFeature() (string, error) {
+func (m *MockCPUFeatureDetector) DetectFeature() (mutation.CPUFeature, error) {
 	return m.feature, m.err
 }
 
@@ -36,7 +36,7 @@ var _ = Describe("Mutation", func() {
 				Expect(vm.Spec.Template).NotTo(BeNil())
 				Expect(vm.Spec.Template.Spec.Domain.CPU).NotTo(BeNil())
 				Expect(vm.Spec.Template.Spec.Domain.CPU.Features).To(HaveLen(1))
-				Expect(vm.Spec.Template.Spec.Domain.CPU.Features[0].Name).To(Equal(mutation.CPUFeatureVMX))
+				Expect(vm.Spec.Template.Spec.Domain.CPU.Features[0].Name).To(BeEquivalentTo(mutation.CPUFeatureVMX))
 				Expect(vm.Spec.Template.Spec.Domain.CPU.Features[0].Policy).To(Equal("require"))
 			})
 
@@ -51,7 +51,7 @@ var _ = Describe("Mutation", func() {
 								Domain: kubevirtv1.DomainSpec{
 									CPU: &kubevirtv1.CPU{
 										Features: []kubevirtv1.CPUFeature{
-											{Name: mutation.CPUFeatureVMX, Policy: "require"},
+											{Name: string(mutation.CPUFeatureVMX), Policy: "require"},
 										},
 									},
 								},
@@ -80,7 +80,7 @@ var _ = Describe("Mutation", func() {
 				Expect(vm.Spec.Template).NotTo(BeNil())
 				Expect(vm.Spec.Template.Spec.Domain.CPU).NotTo(BeNil())
 				Expect(vm.Spec.Template.Spec.Domain.CPU.Features).To(HaveLen(1))
-				Expect(vm.Spec.Template.Spec.Domain.CPU.Features[0].Name).To(Equal(mutation.CPUFeatureSVM))
+				Expect(vm.Spec.Template.Spec.Domain.CPU.Features[0].Name).To(BeEquivalentTo(mutation.CPUFeatureSVM))
 				Expect(vm.Spec.Template.Spec.Domain.CPU.Features[0].Policy).To(Equal("require"))
 			})
 		})
@@ -110,7 +110,7 @@ var _ = Describe("Mutation", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(vm.Spec.Template.Spec.Domain.CPU.Features).To(HaveLen(2))
 				Expect(vm.Spec.Template.Spec.Domain.CPU.Features[0].Name).To(Equal("sse4.2"))
-				Expect(vm.Spec.Template.Spec.Domain.CPU.Features[1].Name).To(Equal(mutation.CPUFeatureVMX))
+				Expect(vm.Spec.Template.Spec.Domain.CPU.Features[1].Name).To(BeEquivalentTo(mutation.CPUFeatureVMX))
 			})
 		})
 
@@ -137,19 +137,6 @@ var _ = Describe("Mutation", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("detection failed"))
 			})
-		})
-	})
-
-	Describe("DefaultCPUFeatureDetector", func() {
-		Context("DetectFeature", func() {
-			It("should be created with default constructor", func() {
-				detector := mutation.NewDefaultCPUFeatureDetector()
-				Expect(detector).NotTo(BeNil())
-			})
-
-			// Note: We can't easily test the actual CPU feature detection
-			// in a unit test as it depends on the host CPU.
-			// Integration tests would be needed to verify this functionality.
 		})
 	})
 })

@@ -1,11 +1,12 @@
 package config
 
 import (
-	"fmt"
+	"os"
 	"regexp"
-	"strings"
 
-	corev1 "k8s.io/api/core/v1"
+	"log/slog"
+
+	"gopkg.in/yaml.v3"
 )
 
 // NamespaceRule represents a namespace with its associated VM name patterns
@@ -14,54 +15,59 @@ type NamespaceRule struct {
 	Patterns  []*regexp.Regexp
 }
 
-// Config holds the configuration for the webhook
-type Config struct {
-	Rules []NamespaceRule
+type NamespaceRuleConfig struct {
+	Namespace string
+	Patterns  []string
 }
 
-// ParseConfigMap parses a ConfigMap into a Config structure
-// Expected format in ConfigMap data:
-// namespace1: regex1,regex2,regex3
-// namespace2: regex4,regex5
-func ParseConfigMap(cm *corev1.ConfigMap) (*Config, error) {
-	if cm == nil {
-		return nil, fmt.Errorf("configmap is nil")
-	}
+// Config holds the configuration for the webhook
+type Config struct {
+	// Server configuration
+	Port    int    `yaml:"port,omitempty"`
+	CertDir string `yaml:"cert-dir,omitempty"`
 
-	config := &Config{
-		Rules: make([]NamespaceRule, 0),
-	}
+	// Logging
+	Debug bool `yaml:"debug,omitempty"`
 
-	for namespace, patternsStr := range cm.Data {
-		if patternsStr == "" {
-			continue
-		}
+	// VM matching rules
+	Rules []NamespaceRuleConfig `yaml:"rules,omitempty"`
 
-		patterns := make([]*regexp.Regexp, 0)
-		// Split by comma to get individual patterns
-		patternList := strings.Split(patternsStr, ",")
-		for _, pattern := range patternList {
-			// Trim whitespace
-			pattern = strings.TrimSpace(pattern)
+	// parsedRules holds the compiled regex patterns for efficient matching
+	parsedRules []NamespaceRule
+}
 
-			if pattern != "" {
-				re, err := regexp.Compile(pattern)
+func (c *Config) GetParsedRules() []NamespaceRule {
+	log := slog.Default()
+	if c.parsedRules == nil {
+		parsed := make([]NamespaceRule, 0, len(c.Rules))
+		for _, rule := range c.Rules {
+			patterns := make([]*regexp.Regexp, 0, len(rule.Patterns))
+			for _, patternStr := range rule.Patterns {
+				regx, err := regexp.Compile(patternStr)
 				if err != nil {
-					return nil, fmt.Errorf("invalid regex pattern '%s' for namespace '%s': %w", pattern, namespace, err)
+					log.Warn("ignoring invalid regex pattern", "pattern", patternStr, "namespace", rule.Namespace)
+					continue
 				}
-				patterns = append(patterns, re)
+				patterns = append(patterns, regx)
 			}
-		}
-
-		if len(patterns) > 0 {
-			config.Rules = append(config.Rules, NamespaceRule{
-				Namespace: namespace,
+			parsed = append(parsed, NamespaceRule{
+				Namespace: rule.Namespace,
 				Patterns:  patterns,
 			})
 		}
+		c.parsedRules = parsed
 	}
+	return c.parsedRules
+}
 
-	return config, nil
+func LoadConfig(configFile string) (*Config, error) {
+	cfg := Config{}
+	data, err := os.ReadFile(configFile)
+	if err != nil {
+		return nil, err
+	}
+	err = yaml.Unmarshal(data, &cfg)
+	return &cfg, err
 }
 
 // Matches checks if a VM in the given namespace with the given name matches any rule
@@ -70,7 +76,8 @@ func (c *Config) Matches(namespace, vmName string) bool {
 		return false
 	}
 
-	for _, rule := range c.Rules {
+	rules := c.GetParsedRules()
+	for _, rule := range rules {
 		if rule.Namespace == namespace {
 			for _, pattern := range rule.Patterns {
 				if pattern.MatchString(vmName) {

@@ -161,7 +161,7 @@ func (h *WebhookHandler) mutate(req *admissionv1.AdmissionRequest) *admissionv1.
 func createJSONPatch(original, mutated []byte) ([]byte, error) {
 	// Simple implementation: unmarshal both, compare, and create patch
 	var origMap, mutMap map[string]interface{}
-	
+
 	if err := json.Unmarshal(original, &origMap); err != nil {
 		return nil, err
 	}
@@ -172,7 +172,7 @@ func createJSONPatch(original, mutated []byte) ([]byte, error) {
 	// Check if they're the same
 	origJSON, _ := json.Marshal(origMap)
 	mutJSON, _ := json.Marshal(mutMap)
-	
+
 	if string(origJSON) == string(mutJSON) {
 		return nil, nil
 	}
@@ -183,22 +183,22 @@ func createJSONPatch(original, mutated []byte) ([]byte, error) {
 	if !ok {
 		return nil, nil
 	}
-	
+
 	template, ok := spec["template"].(map[string]interface{})
 	if !ok {
 		return nil, nil
 	}
-	
+
 	templateSpec, ok := template["spec"].(map[string]interface{})
 	if !ok {
 		return nil, nil
 	}
-	
+
 	domain, ok := templateSpec["domain"].(map[string]interface{})
 	if !ok {
 		return nil, nil
 	}
-	
+
 	cpu, ok := domain["cpu"].(map[string]interface{})
 	if !ok {
 		return nil, nil
@@ -211,14 +211,14 @@ func createJSONPatch(original, mutated []byte) ([]byte, error) {
 
 	// Create patch operations
 	patches := []map[string]interface{}{}
-	
+
 	// Check if the path exists in original
 	origSpec, _ := origMap["spec"].(map[string]interface{})
 	origTemplate, _ := origSpec["template"].(map[string]interface{})
 	origTemplateSpec, _ := origTemplate["spec"].(map[string]interface{})
 	origDomain, _ := origTemplateSpec["domain"].(map[string]interface{})
 	origCPU, _ := origDomain["cpu"].(map[string]interface{})
-	
+
 	if origCPU == nil {
 		// Need to add the entire CPU structure
 		patches = append(patches, map[string]interface{}{

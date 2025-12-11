@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"regexp"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -22,11 +21,11 @@ import (
 
 // MockCPUFeatureDetector for testing
 type MockCPUFeatureDetector struct {
-	feature string
+	feature mutation.CPUFeature
 	err     error
 }
 
-func (m *MockCPUFeatureDetector) DetectFeature() (string, error) {
+func (m *MockCPUFeatureDetector) DetectFeature() (mutation.CPUFeature, error) {
 	return m.feature, m.err
 }
 
@@ -41,11 +40,12 @@ var _ = Describe("WebhookHandler", func() {
 	BeforeEach(func() {
 		detector = &MockCPUFeatureDetector{feature: mutation.CPUFeatureVMX}
 		mutator = mutation.NewVMFeatureMutator(detector)
+
 		cfg = &config.Config{
-			Rules: []config.NamespaceRule{
+			Rules: []config.NamespaceRuleConfig{
 				{
 					Namespace: "test-namespace",
-					Patterns:  []*regexp.Regexp{regexp.MustCompile("^vm-.*")},
+					Patterns:  []string{"^vm-.*"},
 				},
 			},
 		}
@@ -307,4 +307,5 @@ var _ = Describe("WebhookHandler", func() {
 			Expect(handler).NotTo(BeNil())
 		})
 	})
+
 })
