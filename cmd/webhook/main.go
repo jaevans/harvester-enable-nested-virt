@@ -22,11 +22,12 @@ func init() {
 	pflag.String("config", "/etc/webhook/config.yaml", "Path to the configuration file")
 	pflag.Int("port", 8443, "Webhook server port")
 	pflag.String("cert-dir", "/etc/webhook/certs", "The directory containing TLS certificates (overrides CERT_DIR env var)")
-	// pflag.StringVar(&configMapName, "configmap-name", "nested-virt-config", "ConfigMap name containing VM matching rules")
-	// pflag.StringVar(&configMapNamespace, "configmap-namespace", "default", "ConfigMap namespace")
-	// pflag.String("kubeconfig", "", "Path to kubeconfig file (optional, uses in-cluster config if not provided)")
 	pflag.Bool("debug", false, "Enable debug logging")
-	viper.BindPFlags(pflag.CommandLine)
+	err := viper.BindPFlags(pflag.CommandLine)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to bind command line flags: %v\n", err)
+		os.Exit(1)
+	}
 	viper.SetEnvPrefix("nested_virt")
 	viper.AutomaticEnv()
 }
@@ -54,19 +55,6 @@ func main() {
 	// Get the certificate files
 	certFile := fmt.Sprintf("%s/tls.crt", cfg.CertDir)
 	keyFile := fmt.Sprintf("%s/tls.key", cfg.CertDir)
-
-	// Create Kubernetes client
-	// k8sConfig, err := getK8sConfig()
-	// if err != nil {
-	// 	fmt.Fprintf(os.Stderr, "Failed to get Kubernetes config: %v\n", err)
-	// 	os.Exit(1)
-	// }
-
-	// clientset, err := kubernetes.NewForConfig(k8sConfig)
-	// if err != nil {
-	// 	fmt.Fprintf(os.Stderr, "Failed to create Kubernetes client: %v\n", err)
-	// 	os.Exit(1)
-	// }
 
 	logger.Info("Loaded configuration", "rules_count", len(cfg.Rules))
 
