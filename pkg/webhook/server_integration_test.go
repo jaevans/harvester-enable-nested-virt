@@ -223,5 +223,38 @@ var _ = Describe("Server Integration", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("failed to load TLS certificates"))
 		})
+
+		It("should return error when certificate is malformed", func() {
+			server := NewServer(ServerConfig{Port: port}, handler)
+			malformedCert := filepath.Join(testDataDir, "malformed-cert.pem")
+
+			err := server.Start(malformedCert, keyFile)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to load TLS certificates"))
+		})
+
+		It("should return error when port is already in use", func() {
+			// Start first server on the chosen port
+			server1 := NewServer(ServerConfig{Port: port}, handler)
+			errCh1 := make(chan error, 1)
+			go func() {
+				errCh1 <- server1.Start(certFile, keyFile)
+			}()
+
+			time.Sleep(200 * time.Millisecond)
+
+			// Try to start second server on the same port
+			server2 := NewServer(ServerConfig{Port: port}, handler)
+			err := server2.Start(certFile, keyFile)
+
+			// Should get "address already in use" or similar error
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("bind"))
+
+			// Cleanup first server
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = server1.Shutdown(ctx)
+		})
 	})
 })
