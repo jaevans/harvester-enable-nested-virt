@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -29,6 +30,9 @@ func init() {
 		os.Exit(1)
 	}
 	viper.SetEnvPrefix("nested_virt")
+	// Allow environment variables like NESTED_VIRT_CERT_DIR to map to key "cert-dir"
+	// Hyphens are replaced with underscores for env var compatibility
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.AutomaticEnv()
 }
 
@@ -41,6 +45,9 @@ func main() {
 		slog.Error("Failed to load configuration", "error", err)
 		os.Exit(1)
 	}
+
+	// Merge environment variables and CLI flag overrides with correct precedence.
+	cfg = config.MergeWithOverrides(viper.GetViper(), cfg)
 
 	// Set up logging
 	var logLevel slog.Level
