@@ -37,3 +37,9 @@ bin/
 # GoReleaser artifacts
 dist/
 /main
+
+# Security: Never commit private keys
+*.key
+*.pem
+*-key.pem
+*-cert.pem

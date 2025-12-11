@@ -3,10 +3,16 @@ package webhook
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
+	"math/big"
 	"net"
 	"net/http"
 	"os"
@@ -23,6 +29,16 @@ import (
 	"github.com/jaevans/harvester-enable-nested-virt/pkg/config"
 	"github.com/jaevans/harvester-enable-nested-virt/pkg/mutation"
 )
+
+var (
+	testCert []byte
+	testKey  []byte
+)
+
+var _ = BeforeSuite(func() {
+	// Generate test certificates dynamically
+	testCert, testKey = generateTestCertificates()
+})
 
 var _ = Describe("Server Integration", func() {
 	var (
@@ -50,15 +66,14 @@ var _ = Describe("Server Integration", func() {
 		mutator = mutation.NewVMFeatureMutator(detector)
 		handler = NewWebhookHandler(cfg, mutator)
 
-		// Get path to test certificates
-		testDataDir = filepath.Join(os.Getenv("PWD"), "pkg", "webhook", "testdata")
-		if _, err := os.Stat(testDataDir); os.IsNotExist(err) {
-			// Try relative to current directory
-			testDataDir = filepath.Join(".", "testdata")
-		}
-
-		certFile = filepath.Join(testDataDir, "test-cert.pem")
-		keyFile = filepath.Join(testDataDir, "test-key.pem")
+		// Setup test certificate files
+		testDir := GinkgoT().TempDir()
+		certFile = filepath.Join(testDir, "test-cert.pem")
+		keyFile = filepath.Join(testDir, "test-key.pem")
+		err := os.WriteFile(certFile, testCert, 0600)
+		Expect(err).NotTo(HaveOccurred())
+		err = os.WriteFile(keyFile, testKey, 0600)
+		Expect(err).NotTo(HaveOccurred())
 
 		// Skip test if certificates don't exist
 		if _, err := os.Stat(certFile); os.IsNotExist(err) {
@@ -258,3 +273,41 @@ var _ = Describe("Server Integration", func() {
 		})
 	})
 })
+
+func generateTestCertificates() ([]byte, []byte) {
+	// Generate a test RSA key
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		panic(fmt.Sprintf("failed to generate test key: %v", err))
+	}
+
+	// Create certificate template
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName: "test-webhook",
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+	}
+
+	// Create self-signed certificate
+	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create test certificate: %v", err))
+	}
+
+	// Encode certificate to PEM
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+
+	// Encode private key to PEM
+	keyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
+	})
+
+	return certPEM, keyPEM
+}
