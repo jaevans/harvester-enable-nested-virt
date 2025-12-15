@@ -68,7 +68,7 @@ spec:
           secretName: {{ include "enable-nested-virt.certificateSecretName" . }}
       - name: config
         configMap:
-          name: {{ include "enable-nested-virt.fullname" . }}-config
+          name: {{ include "enable-nested-virt.webhookConfigMapName" . }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
