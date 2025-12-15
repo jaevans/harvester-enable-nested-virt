@@ -151,9 +151,9 @@ The following table lists the configurable parameters of the chart and their def
 | `image.tag`                             | Image tag                           | Chart appVersion                                |
 | `image.pullPolicy`                      | Image pull policy                   | `IfNotPresent`                                  |
 | `config.rules`                          | Namespace and VM name pattern rules | `[]` (empty, see values.yaml for examples)      |
+| `config.debug`                          | Enable debug logging                | `false`                                         |
 | `webhook.port`                          | Webhook server port                 | `8443`                                          |
 | `webhook.certDir`                       | Certificate directory               | `/etc/webhook/certs`                            |
-| `webhook.debug`                         | Enable debug logging                | `false`                                         |
 | `certificates.certManager.enabled`      | Use cert-manager                    | `true`                                          |
 | `certificates.certManager.createIssuer` | Create a self-signed Issuer         | `true`                                          |
 | `certificates.certManager.issuerKind`   | Issuer kind (if createIssuer=false) | `ClusterIssuer`                                 |

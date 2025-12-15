@@ -8,7 +8,7 @@ metadata:
 data:
   config.yaml: |
     ---
-    {{- if .Values.webhook.debug }}
+    {{- if .Values.config.debug }}
     debug: true
     {{- else }}
     debug: false

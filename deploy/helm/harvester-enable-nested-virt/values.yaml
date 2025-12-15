@@ -46,6 +46,7 @@ service:
 # Webhook configuration rules
 # Define which VMs in which namespaces should have nested virtualization enabled
 config:
+  debug: false
   rules: []
   # Example rules:
   # rules:
@@ -66,8 +67,6 @@ webhook:
   port: 8443
   # Directory where TLS certificates are mounted
   certDir: /etc/webhook/certs
-  # Enable debug logging
-  debug: false
    
   # Match policy for webhook
   matchPolicy: Equivalent
