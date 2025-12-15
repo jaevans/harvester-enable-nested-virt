@@ -1,0 +1,29 @@
+{{- if .Values.certificates.certManager.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "enable-nested-virt.certificateName" . }}
+  labels:
+    {{- include "enable-nested-virt.labels" . | nindent 4 }}
+spec:
+  secretName: {{ include "enable-nested-virt.certificateSecretName" . }}
+  duration: {{ .Values.certificates.certManager.duration }}
+  renewBefore: {{ .Values.certificates.certManager.renewBefore }}
+  issuerRef:
+    {{- if .Values.certificates.certManager.createIssuer }}
+    kind: Issuer
+    name: {{ include "enable-nested-virt.issuerName" . }}
+    {{- else }}
+    kind: {{ .Values.certificates.certManager.issuerKind }}
+    name: {{ .Values.certificates.certManager.issuerName }}
+    {{- end }}
+  dnsNames:
+    - {{ include "enable-nested-virt.webhookServiceName" . }}
+    - {{ include "enable-nested-virt.webhookServiceName" . }}.{{ .Release.Namespace }}
+    - {{ include "enable-nested-virt.webhookServiceName" . }}.{{ .Release.Namespace }}.svc
+    - {{ include "enable-nested-virt.webhookServiceName" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  usages:
+    - digital signature
+    - key encipherment
+    - server auth
+{{- end }}

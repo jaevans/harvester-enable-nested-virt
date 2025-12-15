@@ -1,4 +1,5 @@
 # Example ConfigMap configurations for the nested virtualization webhook
+# The ConfigMap contains a config.yaml key with the YAML configuration
 
 # Example 1: Enable nested virtualization for all VMs in specific namespaces
 apiVersion: v1
@@ -7,10 +8,18 @@ metadata:
   name: nested-virt-config
   namespace: harvester-nested-virt
 data:
-  # Enable for all VMs in the dev namespace
-  dev: ".*"
-  # Enable for VMs starting with 'test-' in the testing namespace
-  testing: "^test-.*"
+  config.yaml: |
+    ---
+    debug: false
+    rules:
+      # Enable for all VMs in the dev namespace
+      - namespace: dev
+        patterns:
+          - ".*"
+      # Enable for VMs starting with 'test-' in the testing namespace
+      - namespace: testing
+        patterns:
+          - "^test-.*"
 
 ---
 # Example 2: Enable for specific VM name patterns
@@ -20,12 +29,23 @@ metadata:
   name: nested-virt-config
   namespace: harvester-nested-virt
 data:
-  # Only VMs starting with 'vm-' or 'nested-'
-  default: "^vm-.*,^nested-.*"
-  # Production VMs ending with '-prod'
-  production: ".*-prod$"
-  # Staging VMs with 'staging' in the name
-  staging: ".*staging.*"
+  config.yaml: |
+    ---
+    debug: false
+    rules:
+      # Only VMs starting with 'vm-' or 'nested-'
+      - namespace: default
+        patterns:
+          - "^vm-.*"
+          - "^nested-.*"
+      # Production VMs ending with '-prod'
+      - namespace: production
+        patterns:
+          - ".*-prod$"
+      # Staging VMs with 'staging' in the name
+      - namespace: staging
+        patterns:
+          - ".*staging.*"
 
 ---
 # Example 3: Complex patterns
@@ -35,12 +55,26 @@ metadata:
   name: nested-virt-config
   namespace: harvester-nested-virt
 data:
-  # Multiple namespaces with different patterns
-  dev-team-1: "^dev-.*,^test-.*"
-  dev-team-2: "^app-.*"
-  qa: "^qa-vm-[0-9]+$"
-  # Match VMs with specific prefixes or suffixes
-  infrastructure: "^kvm-.*,.*-hypervisor$"
+  config.yaml: |
+    ---
+    debug: true
+    rules:
+      # Multiple namespaces with different patterns
+      - namespace: dev-team-1
+        patterns:
+          - "^dev-.*"
+          - "^test-.*"
+      - namespace: dev-team-2
+        patterns:
+          - "^app-.*"
+      - namespace: qa
+        patterns:
+          - "^qa-vm-[0-9]+$"
+      # Match VMs with specific prefixes or suffixes
+      - namespace: infrastructure
+        patterns:
+          - "^kvm-.*"
+          - ".*-hypervisor$"
 
 ---
 # Example 4: Whitelist specific VMs
@@ -50,7 +84,17 @@ metadata:
   name: nested-virt-config
   namespace: harvester-nested-virt
 data:
-  # Exact VM names (using anchors)
-  critical: "^vm-docker-1$,^vm-k8s-master$,^vm-nested-lab$"
-  # VMs numbered from 1-99
-  development: "^dev-vm-[1-9][0-9]?$"
+  config.yaml: |
+    ---
+    debug: false
+    rules:
+      # Exact VM names (using anchors)
+      - namespace: critical
+        patterns:
+          - "^vm-docker-1$"
+          - "^vm-k8s-master$"
+          - "^vm-nested-lab$"
+      # VMs numbered from 1-99
+      - namespace: development
+        patterns:
+          - "^dev-vm-[1-9][0-9]?$"

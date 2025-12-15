@@ -53,7 +53,7 @@ make docker-build VERSION=v1.0.0
 
 ## Configuration
 
-The webhook is configured via a ConfigMap with the following format:
+The webhook is configured via a ConfigMap containing a `config.yaml` key with the YAML configuration:
 
 ```yaml
 apiVersion: v1
@@ -62,10 +62,21 @@ metadata:
   name: nested-virt-config
   namespace: harvester-nested-virt
 data:
-  # Format: namespace: "regex1,regex2,regex3"
-  default: "^vm-.*,^test-.*"
-  production: "^prod-.*"
-  staging: ".*-staging$"
+  config.yaml: |
+    ---
+    debug: false
+    rules:
+      # Format: list of namespace rules with regex patterns
+      - namespace: default
+        patterns:
+          - "^vm-.*"
+          - "^test-.*"
+      - namespace: production
+        patterns:
+          - "^prod-.*"
+      - namespace: staging
+        patterns:
+          - ".*-staging$"
 ```
 
 Each key is a namespace name, and the value is a comma-separated list of regex patterns to match VM names.

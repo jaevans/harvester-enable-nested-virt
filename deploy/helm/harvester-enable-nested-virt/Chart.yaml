@@ -1,0 +1,17 @@
+apiVersion: v2
+name: harvester-enable-nested-virt
+description: A Helm chart for Harvester Enable Nested Virt - Mutating admission webhook for enabling nested virtualization on KubeVirt VMs
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - kubevirt
+  - webhook
+  - virtualization
+  - harvester
+home: https://github.com/jaevans/harvester-enable-nested-virt
+sources:
+  - https://github.com/jaevans/harvester-enable-nested-virt
+maintainers:
+  - name: James Evans
+    url: https://github.com/jaevans

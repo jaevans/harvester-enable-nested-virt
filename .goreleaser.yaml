@@ -49,6 +49,39 @@ kos:
 checksum:
   name_template: 'checksums.txt'
 
+# SBOM generation
+sboms:
+  - artifacts: archive
+    ids:
+      - webhook
+
+# Sign artifacts (disabled in snapshot mode)
+signs:
+  - cmd: cosign
+    env:
+      - COSIGN_EXPERIMENTAL=1
+    certificate: '${artifact}.pem'
+    args:
+      - sign-blob
+      - '--output-certificate=${certificate}'
+      - '--output-signature=${signature}'
+      - '${artifact}'
+      - "--yes" # needed on cosign 2.0.0+
+    artifacts: checksum
+    output: true
+
+# Docker image signing (disabled in snapshot mode)
+docker_signs:
+  - cmd: cosign
+    env:
+      - COSIGN_EXPERIMENTAL=1
+    artifacts: all
+    output: true
+    args:
+      - 'sign'
+      - '${artifact}'
+      - "--yes" # needed on cosign 2.0.0+
+
 changelog:
   sort: asc
   filters:
@@ -61,11 +94,20 @@ changelog:
       - Merge pull request
       - Merge remote-tracking branch
       - Merge branch
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: 'Bug fixes'
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: 'Enhancements'
+      regexp: '^.*?enhance(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: Others
+      order: 999
 
 release:
-  github:
-    owner: jaevans
-    name: harvester-enable-nested-virt
   draft: false
   prerelease: auto
   name_template: "{{.ProjectName}} {{.Version}}"
@@ -77,7 +119,15 @@ release:
     ### Container Images
     
     Multi-arch container images are available at:
-    - `ghcr.io/jaevans/harvester-nested-virt-webhook:{{.Tag}}`
-    - `ghcr.io/jaevans/harvester-nested-virt-webhook:latest`
+    - ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}
+    - ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/{{ .ProjectName }}:latest
     
     Supported architectures: `linux/amd64`, `linux/arm64`
+
+    ## Helm Chart
+    
+    Install via OCI registry:
+    
+    ```bash
+    helm install harvester-enable-nested-virt oci://ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/{{ .ProjectName }}/charts/harvester-enable-nested-virt --version {{ .Version }}
+    ```

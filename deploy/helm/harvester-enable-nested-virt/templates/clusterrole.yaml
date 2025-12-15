@@ -1,0 +1,11 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "enable-nested-virt.fullname" . }}
+  labels:
+    {{- include "enable-nested-virt.labels" . | nindent 4 }}
+rules:
+  # Need to read VirtualMachines to process them
+  - apiGroups: ["kubevirt.io"]
+    resources: ["virtualmachines"]
+    verbs: ["get", "list", "watch"]
