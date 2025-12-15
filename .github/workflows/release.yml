@@ -43,6 +43,9 @@ jobs:
       - name: Install Syft
         uses: anchore/sbom-action/download-syft@v0.20.10
       
+      - name: Set up Ko
+        uses: ko-build/setup-ko@v0.9
+      
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
