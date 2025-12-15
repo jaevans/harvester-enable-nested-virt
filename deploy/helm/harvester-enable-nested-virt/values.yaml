@@ -43,23 +43,6 @@ service:
   port: 443
   targetPort: 8443
 
-# Webhook configuration rules
-# Define which VMs in which namespaces should have nested virtualization enabled
-config:
-  rules: []
-  # Example rules:
-  # rules:
-  #   - namespace: default
-  #     patterns:
-  #       - "^vm-.*"
-  #       - "^test-.*"
-  #   - namespace: production
-  #     patterns:
-  #       - "^prod-.*"
-  #   - namespace: dev
-  #     patterns:
-  #       - ".*-nested$"
-
 # Webhook server configuration
 webhook:
   # Port the webhook server listens on
@@ -83,6 +66,9 @@ webhook:
 
   # Failure policy: Ignore or Fail
   failurePolicy: Ignore
+
+  # Webhook configuration ConfigMap name
+  configMapName: ""
 
 # Certificate management
 certificates:

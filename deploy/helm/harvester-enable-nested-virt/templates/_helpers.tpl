@@ -86,3 +86,14 @@ Issuer name
 {{- define "enable-nested-virt.issuerName" -}}
 {{- include "enable-nested-virt.fullname" . }}-issuer
 {{- end }}
+
+{{/*
+Webhook configuration ConfigMap name
+*/}}
+{{- define "enable-nested-virt.webhookConfigMapName" -}}
+{{- if .Values.webhook.configMapName }}
+{{- .Values.webhook.configMapName }}
+{{- else }}
+{{- include "enable-nested-virt.fullname" . }}-config
+{{- end }}
+{{- end }}
