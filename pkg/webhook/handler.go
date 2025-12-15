@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 
 	admissionv1 "k8s.io/api/admission/v1"
@@ -42,6 +43,7 @@ func NewWebhookHandler(cfg *config.Config, mutator *mutation.VMFeatureMutator) *
 
 // Handle processes admission webhook requests
 func (h *WebhookHandler) Handle(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("Received webhook request", "method", r.Method, "path", r.URL.Path)
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -102,11 +104,18 @@ func (h *WebhookHandler) mutate(req *admissionv1.AdmissionRequest) *admissionv1.
 		return response
 	}
 
+	slog.Debug("Processing VM", "namespace", req.Namespace, "name", vm.Name, "operation", req.Operation)
+
 	// Check if the VM matches any rule
-	if !h.config.Matches(req.Namespace, vm.Name) {
+	matches := h.config.Matches(req.Namespace, vm.Name)
+	slog.Debug("Checking VM against rules", "namespace", req.Namespace, "name", vm.Name, "matches", matches)
+	if !matches {
 		// No match, allow without modification
+		slog.Debug("VM does not match any rules, skipping mutation")
 		return response
 	}
+
+	slog.Info("VM matches rules, applying nested virtualization", "namespace", req.Namespace, "name", vm.Name)
 
 	// Create a copy of the VM for mutation
 	vmCopy := vm.DeepCopy()
@@ -149,6 +158,12 @@ func (h *WebhookHandler) mutate(req *admissionv1.AdmissionRequest) *admissionv1.
 		patchType := admissionv1.PatchTypeJSONPatch
 		response.Patch = patchBytes
 		response.PatchType = &patchType
+		slog.Info("Applied nested virtualization patch to VM",
+			"namespace", req.Namespace,
+			"name", vm.Name,
+			"patchSize", len(patchBytes))
+	} else {
+		slog.Debug("No patch needed, VM already has nested virtualization enabled")
 	}
 
 	return response
