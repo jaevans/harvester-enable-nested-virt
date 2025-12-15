@@ -129,5 +129,5 @@ release:
     Install via OCI registry:
     
     ```bash
-    helm install vm-feature-manager oci://ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/{{ .ProjectName }}/charts/harvester-enable-nested-virt --version {{ .Version }}
+    helm install harvester-enable-nested-virt oci://ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/{{ .ProjectName }}/charts/harvester-enable-nested-virt --version {{ .Version }}
     ```

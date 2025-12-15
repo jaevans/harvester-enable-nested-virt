@@ -81,6 +81,9 @@ webhook:
   # Reinvocation policy
   reinvocationPolicy: Never
 
+  # Failure policy: Ignore or Fail
+  failurePolicy: Ignore
+
 # Certificate management
 certificates:
   # Use cert-manager to automatically provision certificates
@@ -90,7 +93,7 @@ certificates:
     createIssuer: true
     # If createIssuer is false, you can specify an existing issuer
     issuerKind: ClusterIssuer
-    issuerName: kubevirt-enable-nested-virt-selfsigned-issuer
+    issuerName: harvester-enable-nested-virt-selfsigned-issuer
     # Certificate duration
     duration: 2160h # 90 days
     renewBefore: 360h # 15 days

@@ -61,12 +61,12 @@ To configure which VMs get nested virtualization enabled:
                  disk:
                    bus: virtio
              resources:
-            requests:
-              memory: 1Gi
-        volumes:
-        - name: containerdisk
-          containerDisk:
-            image: registry:5000/kubevirt/cirros-container-disk-demo:devel
+               requests:
+                 memory: 1Gi
+           volumes:
+           - name: containerdisk
+             containerDisk:
+               image: registry:5000/kubevirt/cirros-container-disk-demo:devel
   EOF
 
 Then check if the CPU features were added:

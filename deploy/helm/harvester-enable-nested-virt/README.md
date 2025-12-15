@@ -157,7 +157,7 @@ The following table lists the configurable parameters of the chart and their def
 | `certificates.certManager.enabled`      | Use cert-manager                    | `true`                                          |
 | `certificates.certManager.createIssuer` | Create a self-signed Issuer         | `true`                                          |
 | `certificates.certManager.issuerKind`   | Issuer kind (if createIssuer=false) | `ClusterIssuer`                                 |
-| `certificates.certManager.issuerName`   | Issuer name (if createIssier=false) | `kubevirt-enable-nested-virt-selfsigned-issuer` |
+| `certificates.certManager.issuerName`   | Issuer name (if createIssuer=false) | `kubevirt-enable-nested-virt-selfsigned-issuer` |
 | `resources.limits.cpu`                  | CPU limit                           | `200m`                                          |
 | `resources.limits.memory`               | Memory limit                        | `128Mi`                                         |
 | `resources.requests.cpu`                | CPU request                         | `100m`                                          |

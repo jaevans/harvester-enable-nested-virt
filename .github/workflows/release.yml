@@ -88,4 +88,4 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push chart to OCI registry
-        run: helm push vm-feature-manager-${{ steps.get_version.outputs.version }}.tgz oci://ghcr.io/${{ github.repository_owner }}/kubevirt-vm-feature-manager/charts
+        run: helm push harvester-enable-nested-virt-${{ steps.get_version.outputs.version }}.tgz oci://ghcr.io/${{ github.repository_owner }}/harvester-enable-nested-virt/charts
