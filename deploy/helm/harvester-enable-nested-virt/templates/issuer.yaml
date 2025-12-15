@@ -1,0 +1,13 @@
+{{- if .Values.certificates.certManager.enabled }}
+{{- if .Values.certificates.certManager.createIssuer }}
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "enable-nested-virt.issuerName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "enable-nested-virt.labels" . | nindent 4 }}
+spec:
+  selfSigned: {}
+{{- end }}
+{{- end }}

@@ -1,0 +1,77 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your release is named {{ .Release.Name }}.
+
+The Harvester Enable Nested Virt webhook has been deployed to namespace: {{ .Release.Namespace }}
+
+To verify the deployment:
+
+  kubectl --namespace {{ .Release.Namespace }} get deployment {{ include "enable-nested-virt.fullname" . }}
+  kubectl --namespace {{ .Release.Namespace }} get pods -l "app.kubernetes.io/name={{ include "enable-nested-virt.name" . }}"
+
+To check webhook configuration:
+
+  kubectl get mutatingwebhookconfigurations {{ include "enable-nested-virt.fullname" . }}
+
+{{- if .Values.certificates.certManager.enabled }}
+
+Certificate management is handled by cert-manager.
+To check certificate status:
+
+  kubectl --namespace {{ .Release.Namespace }} get certificate {{ include "enable-nested-virt.certificateName" . }}
+  kubectl --namespace {{ .Release.Namespace }} describe certificate {{ include "enable-nested-virt.certificateName" . }}
+
+{{- else }}
+
+⚠️  WARNING: You are using manual certificate management.
+Make sure the certificates are valid and will be renewed before expiration.
+
+{{- end }}
+
+To configure which VMs get nested virtualization enabled:
+
+  1. Update your values.yaml or use --set to configure rules:
+
+     helm upgrade {{ .Release.Name }} {{ .Chart.Name }} \
+       --namespace {{ .Release.Namespace }} \
+       --set 'config.rules[0].namespace=default' \
+       --set 'config.rules[0].patterns[0]=^vm-.*' \
+       --set 'config.rules[0].patterns[1]=^test-.*'
+
+     Or edit the ConfigMap directly:
+
+     kubectl edit configmap {{ include "enable-nested-virt.fullname" . }}-config -n {{ .Release.Namespace }}
+
+  2. Create a VirtualMachine in a matching namespace with a matching name:
+
+     kubectl apply -f - <<EOF
+     apiVersion: kubevirt.io/v1
+     kind: VirtualMachine
+     metadata:
+       name: vm-test
+       namespace: default
+     spec:
+       running: false
+       template:
+         spec:
+           domain:
+             devices:
+               disks:
+               - name: containerdisk
+                 disk:
+                   bus: virtio
+             resources:
+            requests:
+              memory: 1Gi
+        volumes:
+        - name: containerdisk
+          containerDisk:
+            image: registry:5000/kubevirt/cirros-container-disk-demo:devel
+  EOF
+
+Then check if the CPU features were added:
+
+  kubectl get vm test-vm -o yaml | grep -A 5 "cpu:"
+
+For more information and examples, visit:
+  https://github.com/jaevans/kubevirt-enable-nested-virt

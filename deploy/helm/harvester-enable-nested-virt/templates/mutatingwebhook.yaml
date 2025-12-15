@@ -1,0 +1,32 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: {{ include "enable-nested-virt.fullname" . }}
+  labels:
+    {{- include "enable-nested-virt.labels" . | nindent 4 }}
+  {{- if .Values.certificates.certManager.enabled }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "enable-nested-virt.certificateName" . }}
+  {{- end }}
+webhooks:
+  - name: enable-nested-virt.{{ .Release.Namespace }}.svc
+    admissionReviewVersions: ["v1", "v1beta1"]
+    clientConfig:
+      service:
+        name: {{ include "enable-nested-virt.webhookServiceName" . }}
+        namespace: {{ .Release.Namespace }}
+        path: /mutate
+      {{- if not .Values.certificates.certManager.enabled }}
+      caBundle: {{ .Values.certificates.manual.caCert }}
+      {{- end }}
+    failurePolicy: {{ .Values.webhook.failurePolicy }}
+    matchPolicy: {{ .Values.webhook.matchPolicy }}
+    rules:
+      - apiGroups: ["kubevirt.io"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["virtualmachines"]
+        scope: "*"
+    sideEffects: {{ .Values.webhook.sideEffects }}
+    timeoutSeconds: {{ .Values.webhook.timeoutSeconds }}
+    reinvocationPolicy: {{ .Values.webhook.reinvocationPolicy }}

@@ -32,6 +32,14 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Install Cosign for artifact signing (keyless OIDC-based signing)
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      # Install Syft for SBOM (Software Bill of Materials) generation
+      - name: Install Syft
+        uses: anchore/sbom-action/download-syft@v0.20.10
       
       - name: Set up Ko
         uses: ko-build/setup-ko@v0.9
@@ -44,4 +52,40 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          KO_DOCKER_REPO: ghcr.io/jaevans/harvester-nested-virt-webhook
+          KO_DOCKER_REPO: ghcr.io/${{ github.GITHUB_REPOSITORY }}
+
+  helm-release:
+    needs: goreleaser
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION=${VERSION#v}
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Update Chart.yaml
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+          sed -i "s/^version:.*/version: ${VERSION}/" deploy/helm/harvester-enable-nested-virt/Chart.yaml
+          sed -i "s/^appVersion:.*/appVersion: \"${VERSION}\"/" deploy/helm/harvester-enable-nested-virt/Chart.yaml
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Package Helm chart
+        run: helm package deploy/helm/harvester-enable-nested-virt
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push chart to OCI registry
+        run: helm push vm-feature-manager-${{ steps.get_version.outputs.version }}.tgz oci://ghcr.io/${{ github.repository_owner }}/kubevirt-vm-feature-manager/charts
