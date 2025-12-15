@@ -52,7 +52,7 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          KO_DOCKER_REPO: ghcr.io/${{ github.GITHUB_REPOSITORY }}
+          KO_DOCKER_REPO: ghcr.io/jaevans/harvester-enable-nested-virt
 
   helm-release:
     needs: goreleaser
