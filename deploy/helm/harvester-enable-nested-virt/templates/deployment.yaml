@@ -73,6 +73,18 @@ spec:
       {{- with .Values.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
+      {{- else }}
+      # Default: prefer spreading replicas across nodes. Uses the chart's
+      # selector labels so it keeps working with nameOverride/fullnameOverride.
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  {{- include "enable-nested-virt.selectorLabels" . | nindent 18 }}
       {{- end }}
       {{- with .Values.tolerations }}
       tolerations:
