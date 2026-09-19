@@ -137,7 +137,9 @@ readinessProbe:
   successThreshold: 1
   failureThreshold: 3
 
-# Pod disruption budget
+# Pod disruption budget. Only rendered when replicaCount > 1: with a single
+# replica, minAvailable 1 can never be satisfied during a node drain, so
+# `kubectl drain` (and Harvester's maintenance mode) would retry forever.
 podDisruptionBudget:
   enabled: true
   minAvailable: 1
@@ -147,15 +149,10 @@ nodeSelector: {}
 
 tolerations: []
 
-affinity:
-  podAntiAffinity:
-    preferredDuringSchedulingIgnoredDuringExecution:
-    - weight: 100
-      podAffinityTerm:
-        labelSelector:
-          matchLabels:
-            app.kubernetes.io/name: enable-nested-virt
-        topologyKey: kubernetes.io/hostname
+# Pod affinity/anti-affinity. When left empty the chart applies a default
+# preferred anti-affinity that spreads replicas across nodes using the
+# chart's own selector labels; set this to override it completely.
+affinity: {}
 
 # Priority class for webhook pods
 priorityClassName: "system-cluster-critical"
